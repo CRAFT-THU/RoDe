@@ -53,4 +53,5 @@ add_subdirectory(ASpT_SDDMM_GPU)
 add_subdirectory(RoDe_SDDMM)
 add_subdirectory(RoDe_SpMM)
 
-# add_subdirectory(eval)
+add_subdirectory(mat_prof)
+add_subdirectory(eval)

@@ -1,16 +1,25 @@
 # RoDe
 A Row Decomposition-based Approach for Sparse Matrix Multiplication on GPUs
 
+---
+### Download dataset
 
 
-* compile
+---
+### Compile
 
-```bash
+```shell
 mkdir build
 cd build
 cmake ..
 make
 ```
+---
+### Eval
+Evaluate ASpT
 
-eval
-
+```shell
+mkdir result
+cd script
+./ASpT_eval.sh
+```

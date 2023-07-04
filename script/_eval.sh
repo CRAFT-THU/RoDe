@@ -1,3 +1,5 @@
+OUTPATH=result
+
 cp eval_spmm_*  ../build/eval
 cd ../build/eval
 
@@ -19,5 +21,5 @@ echo "evaluating sddmm_f32_n32..."
 echo "evaluating sddmm_f32_n128..."
 ./eval_spmm_call.sh eval_sddmm_f32_n128 > result__sddmm_f32_n128.csv
 
-mv result_* ../../temp_eval
-cd ../../script
+mv result_* ../../${OUTPATH}
+rm *.sh

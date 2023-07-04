@@ -5,6 +5,6 @@ do
 ii=${i:28}
 fpath="${i}/${ii}.mtx"
 echo -n $ii
-./ASpT_Spmm_f32_n128 $fpath 128
+./ASpT_spmm_f32_n128 $fpath 128
 # echo ">>>>>>>>>>"
 done
