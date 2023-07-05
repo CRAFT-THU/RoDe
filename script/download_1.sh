@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd ..
+
 mkdir data
 cd data
 wget https://www.cise.ufl.edu/research/sparse/MM/DIMACS10/144.tar.gz
@@ -973,5 +975,7 @@ rm ${ii}.mt0
 cd ..
 done
 
+rm conv
+rm conv.c
 cd ..
 

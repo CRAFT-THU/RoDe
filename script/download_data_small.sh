@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ..
 
 mkdir data
 cd data
@@ -10,7 +11,7 @@ wget https://www.cise.ufl.edu/research/sparse/MM/Zhao/Zhao2.tar.gz
 wget https://www.cise.ufl.edu/research/sparse/MM/Andrianov/mip1.tar.gz
 find . -name '*.tar.gz' -exec tar xvf {} \;
 rm *.tar.gz
-cp ../conv.c .
+cp ../script/conv.c .
 gcc -O3 -o conv conv.c
 
 for i in `ls -d */`
@@ -23,5 +24,7 @@ rm ${ii}.mt0
 cd ..
 done
 
+rm conv
+rm conv.c
 cd ..
 

@@ -26,6 +26,8 @@ Sputnik_idx = 3
 cuSparse_idx = 5
 ours_idx = 7
 
+pers = []
+
 for item in items_spmm:
     data1 = pd.read_csv(ASpT_path + item + '.csv')
     data2 = pd.read_csv(others_path + item + '.csv')
@@ -99,6 +101,24 @@ for item in items_spmm:
 
     ndf.to_csv('plot_'+item+ '.csv',index=False)
     
+    
+    gflops_array = data_array[:,[ASpT_idx,Sputnik_idx,cuSparse_idx,ours_idx]]
+    dspd = gflops_array[:,-1] / gflops_array[:,:-1].max(axis=1)
+    
+    per = []
+    per.append((dspd<0.5).sum())
+    per.append((dspd<=0.8).sum() - np.sum(per))
+    per.append((dspd <= 1).sum()-np.sum(per))
+    per.append((dspd <= 1.2).sum()-np.sum(per))
+    per.append((dspd <= 1.5).sum()-np.sum(per))
+    per.append((dspd > 1.5).sum())
+    
+    pers.append([e/np.sum(per) for e in per])
+    
+    
+    
+#%%
+    
 
 ours_idx = 5
 for item in items_sddmm:
@@ -167,6 +187,18 @@ for item in items_sddmm:
     ndf.to_csv('plot_'+item+ '.csv',index=False)
     
     
+    gflops_array = data_array[:,[ASpT_idx,Sputnik_idx,ours_idx]]
+    dspd = gflops_array[:,-1] / gflops_array[:,:-1].max(axis=1)
+    
+    per = []
+    per.append((dspd<0.5).sum())
+    per.append((dspd<=0.8).sum() - np.sum(per))
+    per.append((dspd <= 1).sum()-np.sum(per))
+    per.append((dspd <= 1.2).sum()-np.sum(per))
+    per.append((dspd <= 1.5).sum()-np.sum(per))
+    per.append((dspd > 1.5).sum())
+    
+    pers.append([e/np.sum(per) for e in per])
     
     
 results['spmm gmean spd with sputnik'] = stats.gmean(gm_spmm['Sputnik'])

@@ -28,7 +28,7 @@ using namespace SPC;
 
 #define BN 32
 
-#define SEG_LENGTH 32
+#define SEG_LENGTH 512
 
 // #define VALIDATE
 
