@@ -15,3 +15,6 @@ target_link_libraries(sim_run_prof utils sputnik_spmm cuSPARSE_spmm RoDe_spmm)
 
 add_executable(spmm_prof spmm_prof.cu)
 target_link_libraries(spmm_prof utils sputnik_spmm cuSPARSE_spmm RoDe_spmm)
+
+add_executable(sddmm_prof sddmm_prof.cu)
+target_link_libraries(sddmm_prof utils RoDe_sddmm)
