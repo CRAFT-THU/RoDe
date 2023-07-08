@@ -208,6 +208,8 @@ results['spmm gmean spd with ASpT'] = stats.gmean(gm_spmm['ASpT'])
 results['sddmm gmean spd with sputnik'] = stats.gmean(gm_sddmm['Sputnik'])
 results['sddmm gmean spd with ASpT'] = stats.gmean(gm_sddmm['ASpT'])
 
+results['speedups distribution(0.5,0.8,1,1.2,1.5)'] = pers
+
 
 #%%
 results_json = json.dumps(results)
