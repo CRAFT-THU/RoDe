@@ -1026,6 +1026,14 @@ void SparseMatrix::RowDivide2Segment(int SegmentLength,int vectorLen,int KBLOCK)
 
   st_offsets_staging.push_back(row_offsets_[rows_]);
 
+  if(n_segs > 0) {
+    delete[] seg_row_indices;
+    delete[] seg_st_offsets;
+  }
+  if(n_segs_residue > 0) {
+    delete[] seg_row_indices_residue;
+  }
+
   n_segs = row_indices_staging.size();
   seg_row_indices = new int[n_segs];
   seg_st_offsets = new int[n_segs+1];

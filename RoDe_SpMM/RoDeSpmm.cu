@@ -475,6 +475,182 @@ struct SparseKernel {
         
     }
 
+    //for ablation test
+
+    // no block split
+    static __device__ __forceinline__
+    void Kernel4block_nobs(int m,int k,int n,const ScalarValue* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int* __restrict__ row_indices,const int* __restrict__ st_offsets,const ScalarValue * B,ScalarValue *C) {
+       
+         #ifdef THREADBLOCK_SWIZZLE
+            int m_idx = blockIdx.y * kBlockItemsY + threadIdx.y;
+            int n_idx = blockIdx.x * kBlockItemsX;
+        #else
+            int m_idx = blockIdx.x * kBlockItemsY + threadIdx.y;
+            int n_idx = blockIdx.y * kBlockItemsX ;
+        #endif
+
+        if(m_idx >= m) return;
+        
+        int r_idx = Load(row_indices + m_idx);
+
+        int row_offset = Load(row_offsets + r_idx);
+        int nonzeros = Load(row_offsets + r_idx + 1) - row_offset;
+
+        constexpr int kTileSize = kBlockItemsY * kBlockItemsK ;
+        __shared__  ScalarValue values_tile_array[kTileSize];
+        __shared__  ScalarIndex column_indices_tile_array[kTileSize];
+
+        ScalarValue * values_tile = values_tile_array + kBlockItemsK * threadIdx.y;
+        ScalarIndex * column_indices_tile = column_indices_tile_array + kBlockItemsK * threadIdx.y;
+
+        // memory aligner:
+        static constexpr int kValueAligment = sizeof(SparseValue) / sizeof(ScalarValue);
+        static constexpr uint32_t kAlignmentMask = ~(kValueAligment - 1);
+        static constexpr int kMaxValuesToMask = kValueAligment - 1;
+        static constexpr int kMaskSteps = (kMaxValuesToMask + kBlockWidth - 1) / kBlockWidth;
+
+        int values_to_mask_ = row_offset & (kValueAligment - 1);
+
+        int aligned_nonzeros = nonzeros + values_to_mask_;
+
+        nonzeros = aligned_nonzeros   / kBlockItemsK * kBlockItemsK;
+
+        row_offset = row_offset & kAlignmentMask;
+
+        Barrier barrier(threadIdx.y);
+
+        cooperative_groups::thread_block threadblock = cooperative_groups::this_thread_block();
+        cooperative_groups::thread_block_tile<kBlockWidth> subwarp = cooperative_groups::tiled_partition<kBlockWidth>(threadblock);
+        
+
+        __align__(16) ScalarValue dense_matrix_fragment[kDenseFragmentSize] = {};
+        __align__(16) ScalarValue output_fragment[kOutputFragmentSize] = {};
+
+        const DenseValue *dense_matrix = reinterpret_cast<const DenseValue*>(B + n_idx) + threadIdx.x;
+        DenseValue *dense_fragment = reinterpret_cast<DenseValue*>(dense_matrix_fragment);  
+
+        const SparseValue *sparse_values = reinterpret_cast<const SparseValue*>(values + row_offset) ;// + threadIdx.x;
+        const SparseIndex *sparse_columns = reinterpret_cast<const SparseIndex*>(column_indices + row_offset);// + threadIdx.x;
+
+        SparseValue* sparse_values_tile = reinterpret_cast<SparseValue*>(values_tile); // + threadIdx.x;
+        SparseIndex* sparse_columns_tile = reinterpret_cast<SparseIndex*>(column_indices_tile); // + threadIdx.x;
+
+        constexpr int Pipeline_steps = kBlockItemsK / STAGE;
+
+        if(nonzeros >= kBlockItemsK) {
+            // Load sparse tile...
+            cooperative_groups::memcpy_async(subwarp,sparse_columns_tile,kBlockItemsK / kSparseValuesPerLoad,sparse_columns,kBlockItemsK / kSparseValuesPerLoad);
+            cooperative_groups::memcpy_async(subwarp,sparse_values_tile, kBlockItemsK / kSparseValuesPerLoad,sparse_values ,kBlockItemsK / kSparseValuesPerLoad);
+
+            sparse_columns += kBlockItemsK / kSparseValuesPerLoad;
+            sparse_values +=  kBlockItemsK / kSparseValuesPerLoad;
+
+            cooperative_groups::wait(subwarp);
+
+            // mask padding part:
+            ScalarValue *values_tile_sv = reinterpret_cast<ScalarValue*>(values_tile);
+            ScalarIndex *column_indices_tile_si = reinterpret_cast<ScalarIndex*>(column_indices_tile);
+            int mask_idx = threadIdx.x;
+            #pragma unroll
+            for(int i=0; i < kMaskSteps; ++i) {
+                if(mask_idx < values_to_mask_) {
+                    values_tile_sv[mask_idx] = 0.0f;
+                    column_indices_tile_si[mask_idx] = 0;
+                    mask_idx += kBlockWidth;
+                }
+            }
+            cooperative_groups::wait(subwarp);
+
+            const ScalarIndex *dense_row_offsets = column_indices_tile;
+            #pragma unroll
+            for(int i=0; i < kBlockItemsK; ++i) {
+
+                ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
+                const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
+                #pragma unroll
+                for(int k = 0; k < kDenseThreadItemsX; ++ k) {
+                    int fragment_offset = i * kDenseThreadItemsX * kElementsPerScalar + k;
+                    dense_fragment[fragment_offset] = Load(matrix__);
+                    matrix__ += kBlockWidth;
+                }
+                ++dense_row_offsets;
+            }
+
+            // compute tile
+            const DenseValue* rhs_fragment_ = reinterpret_cast<const DenseValue*>(dense_matrix_fragment);
+            #pragma unroll
+            for(int i=0; i < kBlockItemsK; ++i){
+                ScalarValue lhs_values = values_tile[i];
+
+                #pragma unroll
+                for(int k=0; k < kDenseThreadItemsX; ++k) {
+                    ScalarValue *outputs = output_fragment + 
+                                    k * kDenseValuesPerLoad;
+                    int rhs_offset = i * kDenseThreadItemsX * kElementsPerScalar + k;
+                    SPC::VectorCompute<DenseValue>::FMA(lhs_values,rhs_fragment_[rhs_offset],reinterpret_cast<Accumulator*>(outputs));
+                }
+                
+            }
+            nonzeros -= kBlockItemsK;
+
+        }        
+
+        for(;nonzeros >= kBlockItemsK; nonzeros -= kBlockItemsK) {
+            cooperative_groups::wait(subwarp);
+
+            cooperative_groups::memcpy_async(subwarp,sparse_columns_tile,kBlockItemsK / kSparseValuesPerLoad,sparse_columns,kBlockItemsK / kSparseValuesPerLoad);
+            cooperative_groups::memcpy_async(subwarp,sparse_values_tile, kBlockItemsK / kSparseValuesPerLoad,sparse_values ,kBlockItemsK / kSparseValuesPerLoad);
+
+            sparse_columns += kBlockItemsK / kSparseValuesPerLoad;
+            sparse_values +=  kBlockItemsK / kSparseValuesPerLoad;
+
+            cooperative_groups::wait(subwarp);
+
+            const ScalarIndex *dense_row_offsets = column_indices_tile;
+            #pragma unroll
+            for(int i=0; i < kBlockItemsK; ++i) {
+
+                ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
+                const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
+                #pragma unroll
+                for(int k = 0; k < kDenseThreadItemsX; ++ k) {
+                    int fragment_offset = i * kDenseThreadItemsX * kElementsPerScalar + k;
+                    dense_fragment[fragment_offset] = Load(matrix__);
+                    matrix__ += kBlockWidth;
+                }
+                ++dense_row_offsets;
+            }
+
+            // compute tile
+            const DenseValue* rhs_fragment_ = reinterpret_cast<const DenseValue*>(dense_matrix_fragment);
+            #pragma unroll
+            for(int i=0; i < kBlockItemsK; ++i){
+                ScalarValue lhs_values = values_tile[i];
+
+                #pragma unroll
+                for(int k=0; k < kDenseThreadItemsX; ++k) {
+                    ScalarValue *outputs = output_fragment + 
+                                    k * kDenseValuesPerLoad;
+                    int rhs_offset = i * kDenseThreadItemsX * kElementsPerScalar + k;
+                    SPC::VectorCompute<DenseValue>::FMA(lhs_values,rhs_fragment_[rhs_offset],reinterpret_cast<Accumulator*>(outputs));
+                }
+                
+            }
+        }
+
+        // Store to C
+        const int output_offset = r_idx * n + n_idx;
+        ScalarValue* output_matrix = C + output_offset + threadIdx.x * kDenseValuesPerLoad;
+        #pragma unroll
+        for(int i = 0; i < kDenseThreadItemsX; ++i) {
+            #pragma unroll
+            for(int j=0; j < kDenseValuesPerLoad; ++j) {
+                atomicAdd(output_matrix + j, output_fragment[i * kDenseValuesPerLoad +j]);
+            }
+            output_matrix += kBlockWidth * kDenseValuesPerLoad;
+        }
+    }
+
     //  non-pipeline
     static __device__ __forceinline__
     void Kernel4Block_nopl(int m,int k,int n,const ScalarValue* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int* __restrict__ row_indices,const int* __restrict__ st_offsets,const ScalarValue * B,ScalarValue *C) {
@@ -703,4 +879,74 @@ void RoDeSpmm_n32(int m1,int m2,int k,int n,const double* __restrict__ values,co
 void RoDeSpmm_n128(int m1,int m2,int k,int n,const double* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int *__restrict__ row_indices1,const int *__restrict__ row_indices2,\
                 const int * __restrict__ row_seg_st_offsets,const double *B,double* C,cudaStream_t stream1,cudaStream_t stream2) {
     RoDeSpmmKernel<double,double4,double4,4,32,64,64,8,4,4>(m1,m2,k,n,values,column_indices,row_offsets,row_indices1,row_indices2,row_seg_st_offsets,B,C,stream1,stream2);
+}
+
+
+// for ablation test
+
+template <typename ScalarValue,typename SparseValue,typename DenseValue, int kBlockItemsY,int kBlockItemsK,int kBlockItemsX,int kBlockWidth,int kResidueUnroll,int STAGE> 
+__global__ void __launch_bounds__(kBlockItemsY*kBlockWidth)
+RoDeComputeKernel1_nobs(int m,int k,int n,const ScalarValue* __restrict__ values,const int * __restrict__ column_indices,const int *__restrict__ row_offsets,const int *__restrict__ row_indices,const int* __restrict__ row_seg_st_offsets,const ScalarValue * B,ScalarValue* C) {
+    SparseKernel<ScalarValue,SparseValue,DenseValue,kBlockItemsY,kBlockItemsK,kBlockItemsX,kBlockWidth,kResidueUnroll,STAGE>::Kernel4block_nobs(m,k,n,values,column_indices,row_offsets,row_indices,row_seg_st_offsets,B,C);
+}
+
+template <typename ScalarValue,typename SparseValue,typename DenseValue, int kBlockItemsY,int kBlockItemsK,int kBlockItemsX,int kBlockWidth,int kResidueUnroll,int STAGE> 
+__global__ void __launch_bounds__(kBlockItemsY*kBlockWidth)
+RoDeComputeKernel1_nopl(int m,int k,int n,const ScalarValue* __restrict__ values,const int * __restrict__ column_indices,const int *__restrict__ row_offsets,const int *__restrict__ row_indices,const int* __restrict__ row_seg_st_offsets,const ScalarValue * B,ScalarValue* C) {
+    SparseKernel<ScalarValue,SparseValue,DenseValue,kBlockItemsY,kBlockItemsK,kBlockItemsX,kBlockWidth,kResidueUnroll,STAGE>::Kernel4Block_nopl(m,k,n,values,column_indices,row_offsets,row_indices,row_seg_st_offsets,B,C);
+}
+
+template <typename ScalarValue,typename SparseValue,typename DenseValue, int kBlockItemsY,int kBlockItemsK,int kBlockItemsX1,int kBlockItemsX2,int kBlockWidth,int kResidueUnroll,int STAGE = 8> 
+void RoDeSpmmKernel_nobs(int m1,int m2,int k,int n,const ScalarValue* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int *__restrict__ row_indices1,const int *__restrict__ row_indices2,const int* __restrict__ row_seg_st_offsets,const ScalarValue *B,ScalarValue* C,cudaStream_t stream1,cudaStream_t stream2) {
+
+    #ifdef THREADBLOCK_SWIZZLE
+        dim3 grid_dim1((n + kBlockItemsX1 - 1) / kBlockItemsX1,(m1 + kBlockItemsY - 1) / kBlockItemsY,1);
+        dim3 grid_dim2((n + kBlockItemsX2 - 1) / kBlockItemsX2,(m2 + kBlockItemsY - 1) / kBlockItemsY,1);
+    #else
+        dim3 grid_dim1( (m1 + kBlockItemsY - 1) / kBlockItemsY, (n + kBlockItemsX1 - 1)/kBlockItemsX1,1);
+        dim3 grid_dim2( (m2 + kBlockItemsY - 1) / kBlockItemsY, (n + kBlockItemsX2 - 1)/kBlockItemsX2,1);
+    #endif
+
+    dim3 block_dim( kBlockWidth, kBlockItemsY, 1); 
+
+    RoDeComputeKernel1_nobs<ScalarValue,SparseValue,DenseValue,kBlockItemsY,kBlockItemsK,kBlockItemsX1,kBlockWidth,kResidueUnroll,STAGE><<<grid_dim1,block_dim,0,stream1>>>(m1,k,n,
+                        values,column_indices,row_offsets,row_indices1,row_seg_st_offsets,B,C);
+    RoDeComputeKernel2<ScalarValue,SparseValue,DenseValue,kBlockItemsY,kBlockItemsK,kBlockItemsX2,kBlockWidth,kResidueUnroll,STAGE><<<grid_dim2,block_dim,0,stream2>>>(m2,k,n,
+                        values,column_indices,row_offsets,row_indices2,B,C);
+}
+template <typename ScalarValue,typename SparseValue,typename DenseValue, int kBlockItemsY,int kBlockItemsK,int kBlockItemsX1,int kBlockItemsX2,int kBlockWidth,int kResidueUnroll,int STAGE = 8> 
+void RoDeSpmmKernel_nopl(int m1,int m2,int k,int n,const ScalarValue* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int *__restrict__ row_indices1,const int *__restrict__ row_indices2,const int* __restrict__ row_seg_st_offsets,const ScalarValue *B,ScalarValue* C,cudaStream_t stream1,cudaStream_t stream2) {
+
+    #ifdef THREADBLOCK_SWIZZLE
+        dim3 grid_dim1((n + kBlockItemsX1 - 1) / kBlockItemsX1,(m1 + kBlockItemsY - 1) / kBlockItemsY,1);
+        dim3 grid_dim2((n + kBlockItemsX2 - 1) / kBlockItemsX2,(m2 + kBlockItemsY - 1) / kBlockItemsY,1);
+    #else
+        dim3 grid_dim1( (m1 + kBlockItemsY - 1) / kBlockItemsY, (n + kBlockItemsX1 - 1)/kBlockItemsX1,1);
+        dim3 grid_dim2( (m2 + kBlockItemsY - 1) / kBlockItemsY, (n + kBlockItemsX2 - 1)/kBlockItemsX2,1);
+    #endif
+
+    dim3 block_dim( kBlockWidth, kBlockItemsY, 1); 
+
+    RoDeComputeKernel1_nopl<ScalarValue,SparseValue,DenseValue,kBlockItemsY,kBlockItemsK,kBlockItemsX1,kBlockWidth,kResidueUnroll,STAGE><<<grid_dim1,block_dim,0,stream1>>>(m1,k,n,
+                        values,column_indices,row_offsets,row_indices1,row_seg_st_offsets,B,C);
+    RoDeComputeKernel2<ScalarValue,SparseValue,DenseValue,kBlockItemsY,kBlockItemsK,kBlockItemsX2,kBlockWidth,kResidueUnroll,STAGE><<<grid_dim2,block_dim,0,stream2>>>(m2,k,n,
+                        values,column_indices,row_offsets,row_indices2,B,C);
+}
+
+void RoDeSpmm_n32_nobs(int m1,int m2,int k,int n,const float* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int *__restrict__ row_indices1,const int *__restrict__ row_indices2,\
+                const int * __restrict__ row_seg_st_offsets,const float *B,float* C,cudaStream_t stream1,cudaStream_t stream2) {
+    RoDeSpmmKernel_nobs<float,float4,float4,4,32,32,32,8,4>(m1,m2,k,n,values,column_indices,row_offsets,row_indices1,row_indices2,row_seg_st_offsets,B,C,stream1,stream2);
+}
+void RoDeSpmm_n32_nopl(int m1,int m2,int k,int n,const float* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int *__restrict__ row_indices1,const int *__restrict__ row_indices2,\
+                const int * __restrict__ row_seg_st_offsets,const float *B,float* C,cudaStream_t stream1,cudaStream_t stream2) {
+    RoDeSpmmKernel_nopl<float,float4,float4,4,32,32,32,8,4>(m1,m2,k,n,values,column_indices,row_offsets,row_indices1,row_indices2,row_seg_st_offsets,B,C,stream1,stream2);
+}
+
+void RoDeSpmm_n128_nobs(int m1,int m2,int k,int n,const double* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int *__restrict__ row_indices1,const int *__restrict__ row_indices2,\
+                const int * __restrict__ row_seg_st_offsets,const double *B,double* C,cudaStream_t stream1,cudaStream_t stream2) {
+    RoDeSpmmKernel_nobs<double,double4,double4,4,32,64,64,8,4,4>(m1,m2,k,n,values,column_indices,row_offsets,row_indices1,row_indices2,row_seg_st_offsets,B,C,stream1,stream2);
+}
+void RoDeSpmm_n128_nopl(int m1,int m2,int k,int n,const double* __restrict__ values,const int * __restrict__ column_indices,const int * __restrict__ row_offsets,const int *__restrict__ row_indices1,const int *__restrict__ row_indices2,\
+                const int * __restrict__ row_seg_st_offsets,const double *B,double* C,cudaStream_t stream1,cudaStream_t stream2) {
+    RoDeSpmmKernel_nopl<double,double4,double4,4,32,64,64,8,4,4>(m1,m2,k,n,values,column_indices,row_offsets,row_indices1,row_indices2,row_seg_st_offsets,B,C,stream1,stream2);
 }
