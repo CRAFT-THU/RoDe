@@ -150,12 +150,10 @@ struct SparseKernel {
             for(int j = 0; j < kResidueInnerLimit; ++j){
                 const int k_item_idx = i * kResidueInnerLimit + j;
 
-                // ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
-                ScalarIndex scaled_indices = n / kDenseValuesPerLoad * dense_row_offsets[0];
+                ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
                 ScalarValue lhs_values  = values_tile[k_item_idx];
 
-                // const DenseValue* matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
-                const DenseValue* matrix__ = reinterpret_cast<const DenseValue*>(dense_matrix) + scaled_indices;
+                const DenseValue* matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
 
                 #pragma unroll
                 for(int l = 0; l < kDenseThreadItemsX; ++l) {
@@ -286,11 +284,8 @@ struct SparseKernel {
 
             #pragma unroll
             for(int k_st = 0; k_st < STAGE; ++ k_st) {
-                // ScalarIndex row_idx = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
-                // const DenseValue *dense_values = SPC::OffsetCast<const DenseValue>(dense_matrix,row_idx);
-
-                ScalarIndex row_idx = n / kDenseValuesPerLoad * dense_row_offsets[k_st];
-                const DenseValue *dense_values = reinterpret_cast<const DenseValue*>(dense_matrix) + row_idx;
+                ScalarIndex row_idx = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
+                const DenseValue *dense_values = SPC::OffsetCast<const DenseValue>(dense_matrix,row_idx);
                 #pragma unroll
                 for(int ele_idx = 0; ele_idx < kDenseThreadItemsX; ++ ele_idx) {
                     dense_fragment_regs[0][k_st * kDenseThreadItemsX + ele_idx] = dense_values[ele_idx * kBlockWidth];
@@ -301,8 +296,7 @@ struct SparseKernel {
             int row_idxs[STAGE];
             #pragma unroll
             for(int k_st =0; k_st < STAGE ; ++ k_st) {
-                // row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue) ;
-                ScalarIndex row_idx = n / kDenseValuesPerLoad * dense_row_offsets[k_st];
+                row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue) ;
             }
 
             #pragma unroll
@@ -312,8 +306,7 @@ struct SparseKernel {
                 for(int k_st = 0; k_st < STAGE; ++ k_st) {
                     ScalarIndex row_idx = row_idxs[k_st];
                     // ScalarIndex row_idx = dense_row_offsets[k_st] * n;
-                    // const DenseValue *dense_values = SPC::OffsetCast<const DenseValue>(dense_matrix,row_idx);
-                    const DenseValue *dense_values = reinterpret_cast<const DenseValue*>(dense_matrix) + row_idx;
+                    const DenseValue *dense_values = SPC::OffsetCast<const DenseValue>(dense_matrix,row_idx);
                     #pragma unroll
                     for(int ele_idx = 0; ele_idx < kDenseThreadItemsX; ++ ele_idx) {
                         dense_fragment_regs[(i&1)][k_st * kDenseThreadItemsX + ele_idx] = dense_values[ele_idx * kBlockWidth];
@@ -330,8 +323,7 @@ struct SparseKernel {
                 #pragma unroll
                 for(int k_st =0; k_st < STAGE; ++ k_st) {
                     lhs[k_st] = values_tile[d_idx + k_st];
-                    // row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
-                    row_idxs[k_st] = n / kDenseValuesPerLoad * dense_row_offsets[k_st];
+                    row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
 
                     #pragma unroll
                     for(int j=0; j < kDenseThreadItemsX; ++j)
@@ -388,11 +380,8 @@ struct SparseKernel {
 
             #pragma unroll
             for(int k_st = 0; k_st < STAGE; ++ k_st) {
-                // ScalarIndex row_idx = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
-                // const DenseValue *dense_values = SPC::OffsetCast<const DenseValue>(dense_matrix,row_idx);
-                ScalarIndex row_idx = n / kDenseValuesPerLoad * dense_row_offsets[k_st];
-                const DenseValue *dense_values = reinterpret_cast<const DenseValue*>(dense_matrix) + row_idx;
-
+                ScalarIndex row_idx = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
+                const DenseValue *dense_values = SPC::OffsetCast<const DenseValue>(dense_matrix,row_idx);
                 #pragma unroll
                 for(int ele_idx = 0; ele_idx < kDenseThreadItemsX; ++ ele_idx) {
                     dense_fragment_regs[0][k_st * kDenseThreadItemsX + ele_idx] = dense_values[ele_idx * kBlockWidth];
@@ -403,8 +392,7 @@ struct SparseKernel {
             int row_idxs[STAGE];
             #pragma unroll
             for(int k_st =0; k_st < STAGE ; ++ k_st) {
-                // row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
-                row_idxs[k_st] = n / kDenseValuesPerLoad * dense_row_offsets[k_st];
+                row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
             }
 
             #pragma unroll
@@ -414,8 +402,7 @@ struct SparseKernel {
                 for(int k_st = 0; k_st < STAGE; ++ k_st) {
                     ScalarIndex row_idx = row_idxs[k_st];
                     // ScalarIndex row_idx = dense_row_offsets[k_st] * n;
-                    // const DenseValue *dense_values = SPC::OffsetCast<const DenseValue>(dense_matrix,row_idx);
-                    const DenseValue *dense_values = reinterpret_cast<const DenseValue*>(dense_matrix) + row_idx;
+                    const DenseValue *dense_values = SPC::OffsetCast<const DenseValue>(dense_matrix,row_idx);
                     #pragma unroll
                     for(int ele_idx = 0; ele_idx < kDenseThreadItemsX; ++ ele_idx) {
                         dense_fragment_regs[(i&1)][k_st * kDenseThreadItemsX + ele_idx] = dense_values[ele_idx * kBlockWidth];
@@ -432,8 +419,7 @@ struct SparseKernel {
                 #pragma unroll
                 for(int k_st =0; k_st < STAGE; ++ k_st) {
                     lhs[k_st] = values_tile[d_idx + k_st];
-                    // row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
-                    row_idxs[k_st] = n / kDenseValuesPerLoad * dense_row_offsets[k_st] ;
+                    row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue);
 
                     #pragma unroll
                     for(int j=0; j < kDenseThreadItemsX; ++j)
@@ -579,10 +565,8 @@ struct SparseKernel {
             #pragma unroll
             for(int i=0; i < kBlockItemsK; ++i) {
 
-                // ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
-                // const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
-                ScalarIndex scaled_indices = n / kDenseValuesPerLoad *dense_row_offsets[0];
-                const DenseValue *matrix__ = reinterpret_cast<const DenseValue *>(dense_matrix) + scaled_indices;
+                ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
+                const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
                 #pragma unroll
                 for(int k = 0; k < kDenseThreadItemsX; ++ k) {
                     int fragment_offset = i * kDenseThreadItemsX * kElementsPerScalar + k;
@@ -626,10 +610,8 @@ struct SparseKernel {
             #pragma unroll
             for(int i=0; i < kBlockItemsK; ++i) {
 
-                // ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
-                // const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
-                ScalarIndex scaled_indices = n / kDenseValuesPerLoad *dense_row_offsets[0];
-                const DenseValue *matrix__ = reinterpret_cast<const DenseValue *>(dense_matrix) + scaled_indices;
+                ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
+                const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
                 #pragma unroll
                 for(int k = 0; k < kDenseThreadItemsX; ++ k) {
                     int fragment_offset = i * kDenseThreadItemsX * kElementsPerScalar + k;
@@ -759,10 +741,8 @@ struct SparseKernel {
             #pragma unroll
             for(int i=0; i < kBlockItemsK; ++i) {
 
-                // ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
-                // const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
-                ScalarIndex scaled_indices = n / kDenseValuesPerLoad *dense_row_offsets[0];
-                const DenseValue *matrix__ = reinterpret_cast<const DenseValue *>(dense_matrix) + scaled_indices;
+                ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
+                const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
                 #pragma unroll
                 for(int k = 0; k < kDenseThreadItemsX; ++ k) {
                     int fragment_offset = i * kDenseThreadItemsX * kElementsPerScalar + k;
@@ -806,10 +786,8 @@ struct SparseKernel {
             #pragma unroll
             for(int i=0; i < kBlockItemsK; ++i) {
 
-                // ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
-                // const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
-                ScalarIndex scaled_indices = n / kDenseValuesPerLoad *dense_row_offsets[0];
-                const DenseValue *matrix__ = reinterpret_cast<const DenseValue *>(dense_matrix) + scaled_indices;
+                ScalarIndex scaled_indices = dense_row_offsets[0] * n * sizeof(ScalarValue);
+                const DenseValue *matrix__ = SPC::OffsetCast<const DenseValue>(dense_matrix,scaled_indices);
                 #pragma unroll
                 for(int k = 0; k < kDenseThreadItemsX; ++ k) {
                     int fragment_offset = i * kDenseThreadItemsX * kElementsPerScalar + k;
