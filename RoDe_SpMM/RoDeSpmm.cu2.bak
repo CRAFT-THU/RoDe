@@ -302,7 +302,7 @@ struct SparseKernel {
             #pragma unroll
             for(int k_st =0; k_st < STAGE ; ++ k_st) {
                 // row_idxs[k_st] = dense_row_offsets[k_st] * n * sizeof(ScalarValue) ;
-                row_idxs[k_st] = n / kDenseValuesPerLoad * dense_row_offsets[k_st];
+                ScalarIndex row_idx = n / kDenseValuesPerLoad * dense_row_offsets[k_st];
             }
 
             #pragma unroll

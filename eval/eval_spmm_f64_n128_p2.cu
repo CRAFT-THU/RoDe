@@ -29,6 +29,8 @@ using namespace SPC;
 #define BN 128
 #define SEG_LENGTH 512
 
+// #define VALIDATE
+
 __global__ void MatrixDiff(int n,double* res,double* A,double* B) {
     if(threadIdx.x == 0 && blockIdx.x == 0)
         res[0] = 0.0f;
@@ -82,6 +84,10 @@ int main(int argc,char **argv) {
     }
 
     int ITER = 10;
+
+    #ifdef VALIDATE
+        ITER = 1;
+    #endif
 
     cudaStream_t stream1,stream2;
     cudaStreamCreate(&stream1);
@@ -185,9 +191,9 @@ int main(int argc,char **argv) {
 
     printf(", %f, %f\n",tot_ms,gflops);
 
-    // //    To validate, let ‘ITER’ be 1
-    // MatrixDiff<<<(m*n+31)/32,32>>>(m*n,diff,d_C,d_C1);
-    // MatrixDiff<<<(m*n+31)/32,32>>>(m*n,diff,d_C,d_C2);
+    #ifdef VALIDATE
+        MatrixDiff<<<(m*n+31)/32,32>>>(m*n,diff,d_C,d_C2);
+    #endif
 
     cudaFree(d_C);
     cudaFree(d_C1);
