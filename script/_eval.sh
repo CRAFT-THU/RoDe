@@ -1,6 +1,7 @@
 OUTPATH=result
 
 cp eval_spmm_*  ../build/eval
+cp eval_sddmm_* ../build/eval
 cd ../build/eval
 
 echo "evaluating spmm_f32_n32..."
