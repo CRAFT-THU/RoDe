@@ -1,4 +1,4 @@
-DATA_PATH=./data
+DATA_PATH=$(pwd)/data
 # DATA_PATH=/data/pm/sparse_matrix/data
 RESULT_PATH=ae_result
 
