@@ -1,1 +1,117 @@
-{"spmm_f32_n32": {"Number of advantages(with Sputnik)": 825, "Number of advantages(with cuSparse)": 956, "Number of advantages(with ASpT)": 946, "Gemetric mean speedup(with Sputnik)": 1.729613624602145, "Gemetric mean speedup(with cuSparse)": 3.060460672876364, "Gemetric mean speedup(with ASpT)": 1.7982535189578053, "Max speedup(with Sputnik)": 185.4345588054595, "Max speedup(with cuSparse)": 32.20051517164879, "Max speedup(with ASpT)": 5.836406534663512}, "spmm_f32_n128": {"Number of advantages(with Sputnik)": 932, "Number of advantages(with cuSparse)": 952, "Number of advantages(with ASpT)": 945, "Gemetric mean speedup(with Sputnik)": 2.2186645912345684, "Gemetric mean speedup(with cuSparse)": 1.5400575977932638, "Gemetric mean speedup(with ASpT)": 1.663144586650811, "Max speedup(with Sputnik)": 64.94223574550514, "Max speedup(with cuSparse)": 10.101798578157752, "Max speedup(with ASpT)": 7.380370739058697}, "spmm_f64_n32": {"Number of advantages(with Sputnik)": 771, "Number of advantages(with cuSparse)": 956, "Number of advantages(with ASpT)": 865, "Gemetric mean speedup(with Sputnik)": 1.7839321616385897, "Gemetric mean speedup(with cuSparse)": 2.0567178758913216, "Gemetric mean speedup(with ASpT)": 1.340794196305415, "Max speedup(with Sputnik)": 199.65993528289, "Max speedup(with cuSparse)": 15.549717129883598, "Max speedup(with ASpT)": 7.8645726581874955}, "spmm_f64_n128": {"Number of advantages(with Sputnik)": 809, "Number of advantages(with cuSparse)": 927, "Number of advantages(with ASpT)": 659, "Gemetric mean speedup(with Sputnik)": 1.6254809787438462, "Gemetric mean speedup(with cuSparse)": 1.3840294083294082, "Gemetric mean speedup(with ASpT)": 1.127542736650663, "Max speedup(with Sputnik)": 45.65808248054402, "Max speedup(with cuSparse)": 5.039251883576019, "Max speedup(with ASpT)": 4.656958176376855}, "sddmm_f32_n32": {"Number of advantages(with Sputnik)": 956, "Number of advantages(with ASpT)": 765, "Gemetric mean speedup(with Sputnik)": 474.668069940753, "Gemetric mean speedup(with ASpT)": 1.5479728532284567, "Max speedup(with Sputnik)": 39711.132775834114, "Max speedup(with ASpT)": 8.990685971672102}, "sddmm_f32_n128": {"Number of advantages(with Sputnik)": 956, "Number of advantages(with ASpT)": 900, "Gemetric mean speedup(with Sputnik)": 269.6928631015868, "Gemetric mean speedup(with ASpT)": 1.448459628715315, "Max speedup(with Sputnik)": 18989.853312753672, "Max speedup(with ASpT)": 8.805991537591554}, "spmm gmean spd with sputnik": 1.8264182759694716, "spmm gmean spd with cuSPARSE": 1.913863464862118, "spmm gmean spd with ASpT": 1.4582064491091393, "sddmm gmean spd with sputnik": 357.79126708910314, "sddmm gmean spd with ASpT": 1.4973897903514226, "speedups distribution(0.5,0.8,1,1.2,1.5)": [[0.0, 0.030334728033472803, 0.11610878661087866, 0.38598326359832635, 0.2928870292887029, 0.17468619246861924], [0.0, 0.006276150627615063, 0.032426778242677826, 0.151673640167364, 0.45292887029288703, 0.35669456066945604], [0.0010460251046025104, 0.027196652719665274, 0.22280334728033474, 0.4205020920502092, 0.21652719665271966, 0.11192468619246862], [0.0, 0.03347280334728033, 0.303347280334728, 0.36401673640167365, 0.2792887029288703, 0.0198744769874477], [0.03347280334728033, 0.1108786610878661, 0.05543933054393305, 0.07845188284518828, 0.252092050209205, 0.4696652719665272], [0.0, 0.0, 0.058577405857740586, 0.39644351464435146, 0.1684100418410042, 0.37656903765690375]]}
+{
+    "spmm_f32_n32": {
+        "Number of advantages(with Sputnik)": 825,
+        "Number of advantages(with cuSparse)": 956,
+        "Number of advantages(with ASpT)": 946,
+        "Gemetric mean speedup(with Sputnik)": 1.729613624602145,
+        "Gemetric mean speedup(with cuSparse)": 3.060460672876364,
+        "Gemetric mean speedup(with ASpT)": 1.7982535189578053,
+        "Max speedup(with Sputnik)": 185.4345588054595,
+        "Max speedup(with cuSparse)": 32.20051517164879,
+        "Max speedup(with ASpT)": 5.836406534663512
+    },
+    "spmm_f32_n128": {
+        "Number of advantages(with Sputnik)": 932,
+        "Number of advantages(with cuSparse)": 952,
+        "Number of advantages(with ASpT)": 945,
+        "Gemetric mean speedup(with Sputnik)": 2.2186645912345684,
+        "Gemetric mean speedup(with cuSparse)": 1.5400575977932638,
+        "Gemetric mean speedup(with ASpT)": 1.663144586650811,
+        "Max speedup(with Sputnik)": 64.94223574550514,
+        "Max speedup(with cuSparse)": 10.101798578157752,
+        "Max speedup(with ASpT)": 7.380370739058697
+    },
+    "spmm_f64_n32": {
+        "Number of advantages(with Sputnik)": 771,
+        "Number of advantages(with cuSparse)": 956,
+        "Number of advantages(with ASpT)": 865,
+        "Gemetric mean speedup(with Sputnik)": 1.7839321616385897,
+        "Gemetric mean speedup(with cuSparse)": 2.0567178758913216,
+        "Gemetric mean speedup(with ASpT)": 1.340794196305415,
+        "Max speedup(with Sputnik)": 199.65993528289,
+        "Max speedup(with cuSparse)": 15.549717129883598,
+        "Max speedup(with ASpT)": 7.8645726581874955
+    },
+    "spmm_f64_n128": {
+        "Number of advantages(with Sputnik)": 809,
+        "Number of advantages(with cuSparse)": 927,
+        "Number of advantages(with ASpT)": 659,
+        "Gemetric mean speedup(with Sputnik)": 1.6254809787438462,
+        "Gemetric mean speedup(with cuSparse)": 1.3840294083294082,
+        "Gemetric mean speedup(with ASpT)": 1.127542736650663,
+        "Max speedup(with Sputnik)": 45.65808248054402,
+        "Max speedup(with cuSparse)": 5.039251883576019,
+        "Max speedup(with ASpT)": 4.656958176376855
+    },
+    "sddmm_f32_n32": {
+        "Number of advantages(with Sputnik)": 956,
+        "Number of advantages(with ASpT)": 765,
+        "Gemetric mean speedup(with Sputnik)": 474.668069940753,
+        "Gemetric mean speedup(with ASpT)": 1.5479728532284567,
+        "Max speedup(with Sputnik)": 39711.132775834114,
+        "Max speedup(with ASpT)": 8.990685971672102
+    },
+    "sddmm_f32_n128": {
+        "Number of advantages(with Sputnik)": 956,
+        "Number of advantages(with ASpT)": 900,
+        "Gemetric mean speedup(with Sputnik)": 269.6928631015868,
+        "Gemetric mean speedup(with ASpT)": 1.448459628715315,
+        "Max speedup(with Sputnik)": 18989.853312753672,
+        "Max speedup(with ASpT)": 8.805991537591554
+    },
+    "spmm gmean spd with sputnik": 1.8264182759694716,
+    "spmm gmean spd with cuSPARSE": 1.913863464862118,
+    "spmm gmean spd with ASpT": 1.4582064491091393,
+    "sddmm gmean spd with sputnik": 357.79126708910314,
+    "sddmm gmean spd with ASpT": 1.4973897903514226,
+    "speedups distribution(0.5,0.8,1,1.2,1.5)": [
+        [
+            0.0,
+            0.030334728033472803,
+            0.11610878661087866,
+            0.38598326359832635,
+            0.2928870292887029,
+            0.17468619246861924
+        ],
+        [
+            0.0,
+            0.006276150627615063,
+            0.032426778242677826,
+            0.151673640167364,
+            0.45292887029288703,
+            0.35669456066945604
+        ],
+        [
+            0.0010460251046025104,
+            0.027196652719665274,
+            0.22280334728033474,
+            0.4205020920502092,
+            0.21652719665271966,
+            0.11192468619246862
+        ],
+        [
+            0.0,
+            0.03347280334728033,
+            0.303347280334728,
+            0.36401673640167365,
+            0.2792887029288703,
+            0.0198744769874477
+        ],
+        [
+            0.03347280334728033,
+            0.1108786610878661,
+            0.05543933054393305,
+            0.07845188284518828,
+            0.252092050209205,
+            0.4696652719665272
+        ],
+        [
+            0.0,
+            0.0,
+            0.058577405857740586,
+            0.39644351464435146,
+            0.1684100418410042,
+            0.37656903765690375
+        ]
+    ]
+}

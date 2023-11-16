@@ -1,4 +1,4 @@
-base_path=/data/pm/sparse_matrix/data
+base_path=$2
 echo "Dataset,Sputnik_time,Sputnik_gflops,cuSPARSE_time,cuSPARSE_gflops,ours_time,ours_gflops"
 for i in $base_path/*
 do 

@@ -1,5 +1,5 @@
 echo "Dataset,ASpT_time,ASpT_gflops"
-base_path=/data/pm/sparse_matrix/data
+base_path=$1
 for i in $base_path/*
 do 
 ii=${i:28}
